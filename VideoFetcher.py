@@ -3,25 +3,46 @@ import youtube_dl
 import requests
 import json
 import pickle
-
+import settings
 
 class VideoStatsFetcher:
-    def __init__(self, game, top, appid, appkey):
-        gamedata = pickle.load(open('data/games.pkl', 'wb+'))
+    def __init__(self, game, top):
+        gamedata = pickle.load(open(settings.GamesDataPath, 'rb+'))
+        pickle.dump(gamedata, open(settings.GamesDataPath, 'wb+'))
         self.gameid = gamedata[game]['id']
-        self.appid = appid
-        self.appkey = appkey
+        self.maxvideos = int(gamedata[game]['videos'])
+        self.videos = top
+        self.appid = settings.PlaysTvAppId
+        self.appkey = settings.PlaysTvKey
+
+    def get_vid_stats_page(self, page, limit):
+        call = 'https://api.plays.tv/data/v1/videos/search?appid={0}&appkey={1}' \
+               '&gameId={2}&limit={3}&page={4}'.format(self.appid, self.appkey, self.gameid, limit, page)
+        try:
+            r = requests.get(call).json()
+            r = r['content']['items']
+        except Exception as e:
+            r = 'the error is %s' % e
+        return r
 
     def get_vid_stats(self):
-        page = np.random.random_integers(int(self.maxvideos//self.videos))
-        call = 'https://api.plays.tv/data/v1/games?appid={0}&appkey={1}&gameId={2}&limit=1&sort=popular&sortdir=asc'.format(self.appid, self.appkey, self.gameid)
-        r = requests.get(call)
-        data =  json.loads(r.text)
-        info = {}
-        info['id'] = data['items'][0]['id']
-        info['game'] = data['items'][0]['game']['title']
-        return 
-
+        if int(self.videos) > int(self.maxvideos):
+            self.videos = self.maxvideos
+        k = 1
+        vids = 0
+        data = {}
+        while vids < self.videos:
+            vids += settings.PlaysTvLinesPerPage/settings.PlaysTvLinesPerVid
+            get_vids = self.get_vid_stats_page(k, settings.PlaysTvLinesPerPage)
+            if get_vids == []:
+                break
+            if k == 1:
+                data = get_vids
+            else:
+                data.append(get_vids)
+            k += 1
+        print(vids)
+       
 
 class VideoFetcher:
     def __init__(self, uri, game, videoid):
