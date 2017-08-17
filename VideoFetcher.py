@@ -39,7 +39,7 @@ class VideoStatsFetcher:
             if k == 1:
                 data = get_vids
             else:
-                data.append(get_vids)
+                data += get_vids
             k += 1
         print(vids)
        
