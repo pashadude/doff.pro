@@ -1,13 +1,14 @@
 # gamevids.ai
 
-Summarising videogame videos (slecting frames which will form a short preview) with help of neural networks
+Summarising videogame videos (selecting frames which will form a short preview) with help of neural networks
 =========================================================
 
 Creating video input sequences to train networks
 ------------------------------------------------------------
 initiated by methods from **VideoFetcher.py**<br>
 you need to set up parameters for connection to certain Mongo databse with player data in **settings.py**<br>
-each sequence must contain vids with hashtag-based Jaccard similarity not less than 0.75, share of frames with likes/views ration higher than others by threshold margin(0.25) should not exceed 15%
+each sequence must contain vids with hashtag-based Jaccard similarity form **settings.py**<br>
+not less than 0.75, share of frames with likes/views ration higher than others by threshold margin(0.25) should not exceed 15%
 
 Neural networks to use
 -----------------------------------------------
