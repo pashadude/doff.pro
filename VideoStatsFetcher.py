@@ -4,8 +4,18 @@ import requests
 import settings
 import mongoTools
 import datetime
-import os
-import cv2
+import argparse
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('game', nargs='+', type=str)
+    parser.add_argument('games', type=int)
+    parser.add_argument('resolution', type=int)
+    args = parser.parse_args()
+    stats = VideoStatsFetcher(args.game, args.games, args.resolution)
+    stats.get_game_vids()
+
 
 class VideoStatsFetcher:
     def __init__(self, game, top, resolution):
@@ -80,34 +90,6 @@ class VideoStatsFetcher:
                             db.write_videodata_to_db(video)
 
         return
-       
 
-class VideoFetcher:
-    def __init__(self, uri, game, videoid):
-        self.uri = uri
-        self.game = game
-        self.id = videoid
-
-    def fetch_video(self):
-        ydl_opts = {
-            'format': 'best',
-            'preferredcodec': 'mp3',
-            'outtmpl': 'videos/{0}/{1}/%(title)s'.format(self.game, self.id),
-        }
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([self.uri])
-        self.videoFolderPath = '{0}/{1}/{2}/'.format(settings.VideosDirPath, self.game, self.id)
-        myFilePath = os.path.join(self.videoFolderPath, 'video.mp4')
-        vidcap = cv2.VideoCapture(myFilePath)
-        count = 0
-        success = True
-        while success:
-            success, image = vidcap.read()
-            cv2.imwrite(os.path.join(self.videoFolderPath, 'frame{0}.jpg'.format(count)), image)
-            if cv2.waitKey(10) == 27:
-                break
-            count += 1
-        return
-
-
-        
+    if __name__ == "__main__":
+        main()
