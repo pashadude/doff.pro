@@ -16,11 +16,11 @@ class SequenceFetcher:
         ydl_opts = {
             'format': 'best',
             'preferredcodec': 'mp3',
-            'outtmpl': '{0}/videos/{1}.mp4'.format(self.videoFolderPath, id)
+            'outtmpl': '{0}/{1}/{2}.mp4'.format(self.videoFolderPath, self.sequence, id)
         }
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
             ydl.download([self.uri])
-        return '{0}/videos/{1}.mp4'.format(self.videoFolderPath, id)
+        return '{0}/{1}/{2}.mp4'.format(self.videoFolderPath, self.sequence, id)
 
     def split_video_frames(self, videoPath, sequence, label, id):
         vidcap = cv2.VideoCapture(videoPath)

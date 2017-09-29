@@ -5,11 +5,9 @@ import argparse
 
 #TODO add selection mechs after amazon server productivity comparison
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('game', nargs='+', type=str)
-    parser.add_argument('sequence_length', type=int)
-    parser.add_argument('similarity_threshold', type=double)
-    parser.add_argument('')
+    parser = argparse.ArgumentParser(prog='VIDEO SEQUENCE')
+    parser.add_argument('game', nargs=1, type=str)
+    parser.add_argument('-sequence_length', narga='+', type=int, default=7, const=7)
     args = parser.parse_args()
 
 

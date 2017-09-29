@@ -1,5 +1,4 @@
 from __future__ import unicode_literals
-import youtube_dl
 import requests
 import settings
 import mongoTools
@@ -8,12 +7,12 @@ import argparse
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('game', nargs='+', type=str)
-    parser.add_argument('games', type=int)
-    parser.add_argument('resolution', type=int)
+    parser = argparse.ArgumentParser(prog='GameVidStats', allow_abbrev=False)
+    parser.add_argument('game', nargs=1, type=str)
+    parser.add_argument('games', type=int, nargs=1)
+    parser.add_argument('--res', nargs='?', type=str, const='1080', default='1080')
     args = parser.parse_args()
-    stats = VideoStatsFetcher(args.game, args.games, args.resolution)
+    stats = VideoStatsFetcher(args.game[0], args.games[0], args.res)
     stats.get_game_vids()
 
 
@@ -22,10 +21,11 @@ class VideoStatsFetcher:
         self.game = game
         self.resolution = resolution
         db = mongoTools.MongoDbTools('GameStats')
-        gamedata = db.read_videodata_from_db({"name": game})
-        self.gameid = gamedata[game]['id'][0]
-        self.maxvideos = int(gamedata[game]['videos'][0])
+        gamedata = db.read_videodata_from_db({"name": self.game})
+        self.gameid = gamedata['id'][0]
+        self.maxvideos = int(gamedata['videos'][0])
         self.videos = top
+        #print(self.maxvideos, self.videos)
         self.appid = settings.PlaysTvAppId
         self.appkey = settings.PlaysTvKey
 
@@ -73,23 +73,27 @@ class VideoStatsFetcher:
         for i in data:
             if not (isinstance(i, str)):
                 if i['resolutions'] != None:
-                    if len(db.read_videodata_from_db({"id": i['id']})) != 0 and (self.resolution in i['resolutions']):
+                    #print(self.resolution in i['resolutions'])
+                    if len(db.read_videodata_from_db({"id": i['id']})) == 0 and (self.resolution in i['resolutions']):
                         video = {}
                         video['id'] = i['id']
                         video['author'] = i['author']['id']
                         video['time'] = datetime.datetime.fromtimestamp(int(i['upload_time'])).strftime(
                             '%Y-%m-%d %H:%M:%S')
                         video['hashtags'] = []
-                        video['title'] = i['title']
+                        video['title'] = i['description']
+                        video['rating'] = int(i['stats']['views']) + int(i['stats']['likes'])*5-int(i['author']['stats']['followers'])
+                        #print(rating)
+                        #break
                         if 'metatags' in i:
                             video['hashtags'] = self.turn_metatags_to_hashtags(i['metatags'])
                         if 'hashtags' in i:
                             for hash in i['hashtags']:
                                 video['hashtags'].append(hash['tag'])
-                        if video['hashtags'] != []:
-                            db.write_videodata_to_db(video)
-
+                        video['hashtags'].append(i['author']['id'])
+                        video['hashtags'].append(video['title'])
+                        db.write_videodata_to_db(video)
         return
 
-    if __name__ == "__main__":
-        main()
+if __name__ == "__main__":
+    main()

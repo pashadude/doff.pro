@@ -1,13 +1,11 @@
 import argparse
 import json
 import requests
-import sys
 import settings
 import mongoTools
 
 def main():
     parser = argparse.ArgumentParser()
-
     def convert(argument):
         return list(map(str, argument.split(', ')))
     parser.add_argument('games', nargs='+', type=convert)

@@ -7,8 +7,7 @@ Creating video input sequences to train networks
 ------------------------------------------------------------
 initiated by methods from **VideoFetcher.py**<br>
 you need to set up parameters for connection to certain Mongo databse with player data in **settings.py**<br>
-each sequence must contain vids with hashtag-based Jaccard similarity form **similarities.py**<br>
-not less than 0.75
+every next video in sequence must contain vids with max hashtag-based Jaccard similarity form **similarities.py**<br>
 
 Neural networks to use
 -----------------------------------------------
