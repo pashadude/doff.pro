@@ -17,17 +17,21 @@ class MongoDbTools:
         except pymongo.errors.ConnectionFailure as e:
             return "Server connection failed: %s" % e
 
-    def read_videodata_from_db(self, query, no_id=False):
+    def read_videodata_from_db(self, query="", no_id=False):
         db = self.connect_to_video_db(settings.MongoHost, settings.MongoPort, settings.MongoUserName,
                                       settings.MongoPassword, settings.MongoDb)
         try:
-            cursor = db[self.collection].find(query)
+            if(query != ""):
+                cursor = db[self.collection].find(query)
+            else:
+                cursor = db[self.collection].find()
             df = pd.DataFrame(list(cursor))
         except:
             return "No data found"
         if no_id:
             del df['_id']
         return df
+
 
     def update_videodata_from_db(self, video_id, updated):
         db = self.connect_to_video_db(settings.MongoHost, settings.MongoPort, settings.MongoUserName,

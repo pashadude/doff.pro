@@ -4,6 +4,8 @@ import settings
 import mongoTools
 import datetime
 import argparse
+import smilarities
+import pandas as pd
 
 
 def main():
@@ -14,6 +16,7 @@ def main():
     args = parser.parse_args()
     stats = VideoStatsFetcher(args.game[0], args.games[0], args.res)
     stats.get_game_vids()
+    stats.fill_similarities_matrix()
 
 
 class VideoStatsFetcher:
@@ -28,6 +31,8 @@ class VideoStatsFetcher:
         #print(self.maxvideos, self.videos)
         self.appid = settings.PlaysTvAppId
         self.appkey = settings.PlaysTvKey
+        self.db_game = mongoTools.MongoDbTools(self.game)
+        self.db_sim = mongoTools.MongoDbTools("Similarities_{0}".format(self.game))
 
     def get_game_vids_page(self, page, limit):
         call = 'https://api.plays.tv/data/v1/videos/search?appid={0}&appkey={1}' \
@@ -69,12 +74,11 @@ class VideoStatsFetcher:
         return
 
     def store_game_videos(self, data):
-        db = mongoTools.MongoDbTools(self.game)
         for i in data:
             if not (isinstance(i, str)):
                 if i['resolutions'] != None:
                     #print(self.resolution in i['resolutions'])
-                    if len(db.read_videodata_from_db({"id": i['id']})) == 0 and (self.resolution in i['resolutions']):
+                    if len(self.db_game.read_videodata_from_db({"id": i['id']})) == 0 and (self.resolution in i['resolutions']):
                         video = {}
                         video['id'] = i['id']
                         video['author'] = i['author']['id']
@@ -92,7 +96,31 @@ class VideoStatsFetcher:
                                 video['hashtags'].append(hash['tag'])
                         video['hashtags'].append(i['author']['id'])
                         video['hashtags'].append(video['title'])
-                        db.write_videodata_to_db(video)
+                        self.db_game.write_videodata_to_db(video)
+        return
+
+    def fill_similarities_matrix(self):
+        data = pd.DataFrame(self.db_game.read_videodata_from_db())
+        k = len(data)
+        #print(data['id'][0:1])
+        vid = 0
+        mes = smilarities.SimilarityMeasures()
+        while vid < k:
+            vid1 = 0
+            while vid1 < vid:
+                #num = 1
+                sim = {}
+                sim['ids'] = []
+                num = mes.jaccard_similarity(data['hashtags'][vid], data['hashtags'][vid1])
+                if num >= 0.25:
+                    sim['ids'].append(data['id'][vid])
+                    sim['ids'].append(data['id'][vid1])
+                    sim['jaccard'] = num
+                    self.db_sim.write_videodata_to_db(sim)
+                    #print(num, data['hashtags'][vid],  data['hashtags'][vid1])
+                vid1+=1
+            vid+=1
+
         return
 
 if __name__ == "__main__":
