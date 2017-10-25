@@ -6,6 +6,7 @@ import datetime
 import argparse
 import smilarities
 import pandas as pd
+from py2neo import Graph, Node, Relationship, authenticate
 
 
 def main():
@@ -16,7 +17,7 @@ def main():
     args = parser.parse_args()
     stats = VideoStatsFetcher(args.game[0], args.games[0], args.res)
     stats.get_game_vids()
-    stats.fill_similarities_matrix()
+    stats.fill_similarities_graph()
 
 
 class VideoStatsFetcher:
@@ -99,28 +100,27 @@ class VideoStatsFetcher:
                         self.db_game.write_videodata_to_db(video)
         return
 
-    def fill_similarities_matrix(self):
+    def fill_similarities_graph(self):
+        authenticate(settings.NeoHost, settings.NeoLog, settings.NeoPass)
+        graph = Graph("{0}/db/data/".format(settings.NeoHost))
+        graph.delete_all()
         data = pd.DataFrame(self.db_game.read_videodata_from_db())
+        #print(data)
         k = len(data)
-        #print(data['id'][0:1])
         vid = 0
         mes = smilarities.SimilarityMeasures()
         while vid < k:
+            node = Node(data['id'][vid], rating = int(data['rating'][vid]), title = data['title'][vid])
             vid1 = 0
             while vid1 < vid:
-                #num = 1
-                sim = {}
-                sim['ids'] = []
                 num = mes.jaccard_similarity(data['hashtags'][vid], data['hashtags'][vid1])
-                if num >= 0.25:
-                    sim['ids'].append(data['id'][vid])
-                    sim['ids'].append(data['id'][vid1])
-                    sim['jaccard'] = num
-                    self.db_sim.write_videodata_to_db(sim)
-                    #print(num, data['hashtags'][vid],  data['hashtags'][vid1])
-                vid1+=1
-            vid+=1
-
+                if num >= 0.5:
+                    jaccard = Relationship(data['id'][vid], "jaccard", data['id'][vid1], jaccard_similarity = num)
+                num = mes.jaccard_similarity(data['hashtags'][vid1], data['hashtags'][vid])
+                if num >= 0.5:
+                    jaccard  = Relationship(data['id'][vid1], "jaccard", data['id'][vid], jaccard_similarity = num)
+                vid1 += 1
+            vid += 1
         return
 
 if __name__ == "__main__":

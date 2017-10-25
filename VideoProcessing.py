@@ -33,6 +33,9 @@ class SequenceFetcher:
                 break
             count += 1
         return count
+    def cut_additional_frames(self, sequence, label, id):
+        return
+
 
 
 
