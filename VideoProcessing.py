@@ -1,41 +1,76 @@
-import os
+import sys
+sys.path.append("/usr/local/lib/python3.5/site-packages")
 import cv2
 import settings
+import pandas as pd
+import argparse
 import youtube_dl
 
-class SequenceFetcher:
-    def __init__(self, uri, game, videoids, sequence):
-        self.uri = uri
-        self.game = game
-        self.ids = videoids
-        self.sequence = sequence
-        self.videoFolderPath = '{0}/{1}/{2}'.format(settings.VideosDirPath, self.game, self.sequence)
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('game', nargs=1, type=str)
+    def convert(argument):
+        return list(map(str, argument.split(', ')))
+    parser.add_argument('sequence', nargs='+', type=convert)
+    args = parser.parse_args()
+    images = SequenceFetcher(args.game[0], args.sequence[0])
+    images.make_sequences()
 
-    def fetch_video(self, id):
-        print(cv2.__version__, cv2.__spec__)
+class SequenceFetcher:
+    def __init__(self, game, sequences):
+        self.game = game
+        self.sequences = sequences
+        self.videoSequenceFilePath = '{0}/{1}/sequences.csv'.format(settings.VideosDirPath, self.game)
+        print(self.game, self.sequences)
+
+    def make_sequences(self):
+        df = pd.read_csv(self.videoSequenceFilePath)
+        #print(list(df.columns.values))
+        k = 1
+        for i in df['sequence']:
+            if str(i) in self.sequences:
+                vid = self.fetch_video(df['video'][k], i)
+                self.split_video_frames(vid, i, df['video'][k], df['rating'][k])
+            k+=1
+        return
+
+    def fetch_video(self, id, sequence):
+        uri = 'http://plays.tv/video/{0}'.format(id)
+        #print(cv2.__version__, cv2.__spec__)
         ydl_opts = {
             'format': 'best',
             'preferredcodec': 'mp3',
-            'outtmpl': '{0}/{1}/{2}.mp4'.format(self.videoFolderPath, self.sequence, id)
+            'outtmpl': '{0}/{1}/sequence_{2}/{3}.mp4'.format(settings.VideosDirPath, self.game, sequence, id)
         }
-        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            ydl.download([self.uri])
-        return '{0}/{1}/{2}.mp4'.format(self.videoFolderPath, self.sequence, id)
+        #with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            #ydl.download([uri])
+        return '{0}/{1}/sequence_{2}/{3}.mp4'.format(settings.VideosDirPath, self.game, sequence, id)
 
-    def split_video_frames(self, videoPath, sequence, label, id):
+    def split_video_frames(self, videoPath, sequence, video, rating):
         vidcap = cv2.VideoCapture(videoPath)
-        count = 0
         success = True
+        count = 0
         while success:
             success, image = vidcap.read()
-            cv2.imwrite('{0}/{1}/{2}_frame{3}.jpg'.format(self.videoFolderPath, label, id, count), image)
+            count+=1
+            cv2.imwrite('{0}/{1}/sequence_{2}/seq{2}_vid{3}_frame{4}_rating{5}.jpg'.format(settings.VideosDirPath, self.game, sequence, video, count, rating), image)
+            #self.cut_additional_frames(sequence, int(start + count), rating)
             if cv2.waitKey(10) == 27:
                 break
-            count += 1
-        return count
-    def cut_additional_frames(self, sequence, label, id):
+        vidcap.release()
         return
 
+    # need to improve
+    def cut_additional_frames(self, sequence, frame, rating):
+        img = cv2.imread('{0}/{1}_frame{2}_0_{3}.jpg'.format(self.videoFolderPath, sequence, frame, rating))
+        count = 1
+        for k in self.angles:
+            crop_img = img[k[0]:299, k[1]:299]
+            #crop_img = img[200:400, 100:300] # Crop from x, y, w, h -> 100, 200, 300, 400
+            cv2.imwrite('{0}/{1}_frame{2}_{3}_{4}.jpg'.format(self.videoFolderPath, sequence, frame, count, rating), crop_img)
+            count += 1
+        return
 
-
+if __name__ == "__main__":
+    main()
 

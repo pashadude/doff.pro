@@ -1,26 +1,52 @@
-import mongoTools
-import smilarities
-import VideoProcessing
+import pandas as pd
 import argparse
+import settings
+import os
+from py2neo import Graph, Node, Relationship, authenticate
 
-#TODO add selection mechs after amazon server productivity comparison
+
 def main():
-    parser = argparse.ArgumentParser(prog='VIDEO SEQUENCE')
+    parser = argparse.ArgumentParser()
     parser.add_argument('game', nargs=1, type=str)
-    parser.add_argument('--seq_min_len', nargs=1, type=int, default=5, const=5)
     args = parser.parse_args()
+    vids = VideoSequencesCreation(args.game[0])
+    vids.make_sequence()
+    #images = VideoProcessing()
 
-class VideoSequenceCreation:
-    def __init__(self, game, length):
+class VideoSequencesCreation:
+    def __init__(self, game):
         self.game = game
-        self.length = length
         self.video_ids = []
+        self.ratings = []
+        self.seq_ids = []
 
     def make_sequence(self):
+        authenticate(settings.NeoHost, settings.NeoLog, settings.NeoPass)
+        graph = Graph("{0}/db/data/".format(settings.NeoHost))
+        query = """MATCH pu = (start:Video)-[:Jaccard*3]->(sequence:Video)
+                WHERE start <> sequence
+        RETURN nodes(pu) """
+        # we cut a separate sequence every for every step
+        res = graph.run(query).data()
+        #print(pd.DataFrame(res))
+        id = 0
+        for i in res:
+            for vids in i.values():
+                for element in vids:
+                    self.seq_ids.append(id)
+                    self.video_ids.append(element['id'])
+                    self.ratings.append(element['rating'])
+            id = id + 1
+        data = {'sequence': self.seq_ids, 'video': self.video_ids, 'rating': self.ratings}
+        df = pd.DataFrame(data)
+        path = '{0}/{1}/'.format(settings.VideosDirPath, self.game)
+        if not os.path.exists(path):
+            os.makedirs(path)
+        file_name = '{0}/sequences.csv'.format(path)
+        df.to_csv(file_name, encoding='utf-8')
         return
 
-    def cut_sequence(self):
-        return
+
 
 if __name__ == "__main__":
     main()
