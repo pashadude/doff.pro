@@ -39,6 +39,8 @@ class VideoSequencesCreation:
             id = id + 1
         data = {'sequence': self.seq_ids, 'video': self.video_ids, 'rating': self.ratings}
         df = pd.DataFrame(data)
+        #dz = df.groupby("sequence")['rating'].std()
+
         path = '{0}/{1}/'.format(settings.VideosDirPath, self.game)
         if not os.path.exists(path):
             os.makedirs(path)

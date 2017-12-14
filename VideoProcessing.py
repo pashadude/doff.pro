@@ -42,8 +42,8 @@ class SequenceFetcher:
             'preferredcodec': 'mp3',
             'outtmpl': '{0}/{1}/sequence_{2}/{3}.mp4'.format(settings.VideosDirPath, self.game, sequence, id)
         }
-        #with youtube_dl.YoutubeDL(ydl_opts) as ydl:
-            #ydl.download([uri])
+        with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([uri])
         return '{0}/{1}/sequence_{2}/{3}.mp4'.format(settings.VideosDirPath, self.game, sequence, id)
 
     def split_video_frames(self, videoPath, sequence, video, rating):
