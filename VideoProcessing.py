@@ -19,6 +19,7 @@ def main():
 class SequenceFetcher:
     def __init__(self, game, sequences):
         self.game = game
+        self.angles = settings.
         self.sequences = sequences
         self.videoSequenceFilePath = '{0}/{1}/sequences.csv'.format(settings.VideosDirPath, self.game)
         print(self.game, self.sequences)
@@ -53,7 +54,7 @@ class SequenceFetcher:
         while success:
             success, image = vidcap.read()
             count+=1
-            cv2.imwrite('{0}/{1}/sequence_{2}/seq{2}_vid{3}_frame{4}_rating{5}.jpg'.format(settings.VideosDirPath, self.game, sequence, video, count, rating), image)
+
             #self.cut_additional_frames(sequence, int(start + count), rating)
             if cv2.waitKey(10) == 27:
                 break
@@ -61,13 +62,15 @@ class SequenceFetcher:
         return
 
     # need to improve
-    def cut_additional_frames(self, sequence, frame, rating):
-        img = cv2.imread('{0}/{1}_frame{2}_0_{3}.jpg'.format(self.videoFolderPath, sequence, frame, rating))
+    def cut_additional_frames(self, sequence, video, frame, rating):
+        img = cv2.imread('{0}/{1}/sequence_{2}/seq{2}_vid{3}_frame{4}_full_rating{5}.jpg'.format(settings.VideosDirPath, self.game, sequence, video, frame, rating))
         count = 1
         for k in self.angles:
             crop_img = img[k[0]:299, k[1]:299]
-            #crop_img = img[200:400, 100:300] # Crop from x, y, w, h -> 100, 200, 300, 400
-            cv2.imwrite('{0}/{1}_frame{2}_{3}_{4}.jpg'.format(self.videoFolderPath, sequence, frame, count, rating), crop_img)
+            #crop_img = img[200:400, 100:300]
+            cv2.imwrite('{0}/{1}/sequence_{2}/seq{2}_vid{3}_frame{4}_{5}_rating{6}.jpg'.format(settings.VideosDirPath,
+                                                                                                self.game, sequence,
+                                                                                                video, frame, count, rating),crop_img)
             count += 1
         return
 
