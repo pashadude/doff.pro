@@ -19,7 +19,7 @@ def main():
 class SequenceFetcher:
     def __init__(self, game, sequences):
         self.game = game
-        self.angles = settings.
+        self.angles = settings.angles
         self.sequences = sequences
         self.videoSequenceFilePath = '{0}/{1}/sequences.csv'.format(settings.VideosDirPath, self.game)
         print(self.game, self.sequences)
@@ -41,6 +41,7 @@ class SequenceFetcher:
         ydl_opts = {
             'format': 'best',
             'preferredcodec': 'mp3',
+            'fps': 24,
             'outtmpl': '{0}/{1}/sequence_{2}/{3}.mp4'.format(settings.VideosDirPath, self.game, sequence, id)
         }
         with youtube_dl.YoutubeDL(ydl_opts) as ydl:
@@ -51,10 +52,13 @@ class SequenceFetcher:
         vidcap = cv2.VideoCapture(videoPath)
         success = True
         count = 0
+        count_frame = 0
         while success:
             success, image = vidcap.read()
             count+=1
-
+            if count%12==0:
+                count_frame += 1
+                cv2.imwrite('{0}/{1}/sequence_{2}/seq{2}_vid{3}_frame{4}_rating{5}.jpg'.format(settings.VideosDirPath, self.game, sequence, video, count_frame, rating), image)
             #self.cut_additional_frames(sequence, int(start + count), rating)
             if cv2.waitKey(10) == 27:
                 break

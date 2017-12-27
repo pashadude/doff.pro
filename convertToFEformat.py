@@ -26,7 +26,7 @@ class converter:
        # game_id, sequence_id, frame_id, image_corner, frame_rating = tokens
        sequence_id=tokens[0].replace('seq','')
        frame_id=tokens[2].replace('frame','')
-       rating=tokens[3].replace('rating-','')
+       rating=tokens[3].replace('rating','')
        rating=rating.replace('.jpg','')
        return (int(sequence_id), int(frame_id), float(rating))
 

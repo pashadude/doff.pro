@@ -23,7 +23,7 @@ class MongoDbTools:
         try:
             if(query != ""):
                 cursor = db[self.collection].find(query)
-            else:
+            else: 
                 cursor = db[self.collection].find()
             df = pd.DataFrame(list(cursor))
         except:
