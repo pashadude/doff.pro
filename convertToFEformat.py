@@ -10,6 +10,8 @@ class converter:
        self.nVideos = 0
        self.nFramesPerVideo = {}
        self.seqId_To_videoId = {}
+       self.seq2vid_frame={}
+       self.seq_linearFrameId={}
 
    def parseFname(self,fname):
        ''' extract
@@ -23,12 +25,13 @@ class converter:
        tokens = fname.split("_")
        if len(tokens)!=4: return None
 
-       # game_id, sequence_id, frame_id, image_corner, frame_rating = tokens
+       # sequence_id, vid_id, frame_id, frame_rating = tokens
        sequence_id=tokens[0].replace('seq','')
+       vid_id=tokens[1].replace('vid','')
        frame_id=tokens[2].replace('frame','')
        rating=tokens[3].replace('rating','')
        rating=rating.replace('.jpg','')
-       return (int(sequence_id), int(frame_id), float(rating))
+       return (int(sequence_id), vid_id, int(frame_id), float(rating))
 
    def splitFname(self,filePath_b):
        fname_b = ntpath.basename(filePath_b) # this is a byte array
@@ -45,11 +48,30 @@ class converter:
 
        return video_id
 
-   def updateNumberOfFrames(self,video_id, frame_id):
+   def updateNumberOfFrames(self,video_id, vid_id, frame_id):
        if (video_id not in self.nFramesPerVideo):
-          self.nFramesPerVideo[video_id]=frame_id
+          self.nFramesPerSeqVideo[video_id]=frame_id
        else:
-          self.nFramesPerVideo[video_id]=max(frame_id, self.nFramesPerVideo[video_id])
+          self.nFramesPerSeqVideo[video_id]=max(frame_id, self.nFramesPerVideo[video_id])
+
+   def addVidFrame(self, seq_id, vid_id,frame_id):
+       if not seq_id in self.seq2vid_frame:
+           self.seq2vid_frame[seq_id]=[]
+       self.seq2vid_frame[seq_id].append((vid_id, frame_id))
+  
+
+   def map_VidFrameId_to_linearFrameId(self):
+       for seq_id,  vid_frames  in  self.seq2vid_frame.items():
+             vid_frames.sort()
+             self.seq_linearFrameId[seq_id]={}
+             for ind, vid_frame in enumerate(vid_frames):
+                  self.seq_linearFrameId[seq_id][vid_frame]=ind     
+                  # print("[ ", seq_id,", ",vid_frame,"] -> ", ind)
+             self.nFramesPerVideo[self.getVideoId(seq_id)]=len(self.seq_linearFrameId[seq_id])
+             print ("nFrames for ", seq_id, " = ",len(self.seq_linearFrameId[seq_id]) )
+
+   def get_linear_frame_id(self, sequence_id, vid_id, frame_id):
+       return self.seq_linearFrameId[sequence_id][(vid_id,frame_id)]
 
    def loadFileWithFeatures(self,filename, features_key = "Logits"):
        print("Loading file ", filename)
@@ -66,15 +88,18 @@ class converter:
            tokens = self.parseFname(fname)
            if tokens is None:
                continue
-           sequence_id, frame_id, frame_rating = tokens
+           sequence_id, vid_id, frame_id, frame_rating = tokens
 
            # unique identifier of a "video" is <sequence_id>
            # Find out: 
            #   map <sequence_id> to a unique linear index 
-           #   compute number of frames and number of corners per frame for each <sequence_id>
+           #   map <vid_id, frame_id> to a linear frame id
 
            video_id = self.getVideoId(sequence_id)
-           self.updateNumberOfFrames(video_id, frame_id)
+           #self.updateNumberOfFrames(video_id, vid_id, frame_id)
+           self.addVidFrame(sequence_id, vid_id,frame_id)
+      
+       self.map_VidFrameId_to_linearFrameId()    
 
 
    def initializeOutput(self, lstmFile):
@@ -94,7 +119,7 @@ class converter:
           lstmFile.create_dataset('fea_'+str(video_id), (self.nFeatures, number_of_frames))
           lstmFile.create_dataset('gt_1_'+str(video_id), (number_of_frames,1))
 
-          lstmFile.create_dataset('gt_2_'+str(video_id),(number_of_frames,1))  # unused
+          #lstmFile.create_dataset('gt_2_'+str(video_id),(number_of_frames,1))  # unused
           #lstmFile.create_dataset('ord'+str(video_id),(number_of_frames,1))   # unused
 
 
@@ -107,16 +132,20 @@ class converter:
       for feature_row, fpath in zip(self.features, self.image_fullnames):
            # read corresponding file name again
            fname = self.splitFname(fpath)
-           sequence_id, frame_id, frame_rating = self.parseFname(fname)
+           sequence_id, vid_id, frame_id, frame_rating = self.parseFname(fname)
            # where does this row of features go into output file?
-           # into fea_<video_id> column <frame_id> and within column into position corner*len(feature_row)
+           # into fea_<video_id> column <frame_id>)
            video_id = self.getVideoId(sequence_id)
 
            feature_set = lstmFile.get('fea_'+str(video_id))
-           feature_set[:, frame_id] = feature_row
+
+           # get linear frame_id from pair <vid_id, frame_id>
+           linear_frame_id = self.get_linear_frame_id(sequence_id, vid_id, frame_id)
+           feature_set[:, linear_frame_id] = feature_row
 
            rating_set = lstmFile.get('gt_1_'+str(video_id))
-           rating_set[frame_id] = frame_rating
+           rating_set[linear_frame_id] = frame_rating
+           print('assigning rating ',frame_rating,' to frame ', linear_frame_id)
 
       lstmFile.close()
       self.input_file.close()
