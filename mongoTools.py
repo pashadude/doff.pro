@@ -32,6 +32,19 @@ class MongoDbTools:
             del df['_id']
         return df
 
+    def read_text_index_videodata_from_db(self, field, stxt, no_id=False):
+        db = self.connect_to_video_db(settings.MongoHost, settings.MongoPort, settings.MongoUserName,
+                                      settings.MongoPassword, settings.MongoDb)
+        index = db[self.collection].ensure_index([(field, "text"), ("unique", 1), ("dropDups", 1)], default_language ='english')
+        try:
+            res = db[self.collection].find({'$text': {'$search': stxt}}, {'score':{'$meta':"textScore"}})
+            df = pd.DataFrame(list(res))
+        except:
+            return "No data found"
+        if no_id:
+            del df['_id']
+        return df
+
 
     def update_videodata_from_db(self, video_id, updated):
         db = self.connect_to_video_db(settings.MongoHost, settings.MongoPort, settings.MongoUserName,
