@@ -13,9 +13,9 @@ you need to set up parameters for connection to certain Mongo databse with playe
 >python VideoStatsFetcher.py "League of Legends" 900
 3. Create Graph of similar videos (nodes are the videos, connections are jaccard similarites higher than certain threshold, currently 0.5)<br>
 and save it in py2neo/neo4j format with fill_similarities_graph method in **VideoStatsFetcher**<br>
-4. Create a dataframe containing all video Id's and ratings for each video sequence with **VideoSequenceCreation.py**, by default 4 vids in a sequence<br>
+4. Create a dataframe containing all video Id's and ratings for each video sequence of a certain length with **VideoSequenceCreation.py**<br>
 every next video in sequence must be the one with the highest hashtag-based Jaccard similarity form **similarities.py**<br>
->python VideoSequenceCreation.py "League of Legends"
+>python VideoSequenceCreation.py "League of Legends" 5
 5. Take frames from a particular video sequence(s) and assign rating to each frame **VideoProcessing.py** <br>
 >python VideoProcessing.py "League of Legends" "0, 1"
 6. Generate features for each frame using a pretrained image processing neural network. [TF feature extractor](https://github.com/tomrunia/TF_FeatureExtraction) can generate frame-level features with a number of of models, including GoogleNet, Inception, ResNet etc. <br>

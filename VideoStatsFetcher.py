@@ -88,7 +88,7 @@ class VideoStatsFetcher:
                         video['hashtags'] = []
                         video['title'] = i['description']
                         video['rating'] = (int(i['stats']['views']) + int(i['stats']['likes'])*5)/(int(i['author']['stats']['followers'])+1)
-                        #print(rating)
+                        #print(video)
                         #break
                         if 'metatags' in i:
                             video['hashtags'] = self.turn_metatags_to_hashtags(i['metatags'])
@@ -104,38 +104,48 @@ class VideoStatsFetcher:
         authenticate(settings.NeoHost, settings.NeoLog, settings.NeoPass)
         graph = Graph("{0}/db/data/".format(settings.NeoHost))
         graph.delete_all()
+        try:
+            graph.schema.create_uniqueness_constraint('Video', 'id')
+        except:
+            pass
         data = pd.DataFrame(self.db_game.read_videodata_from_db())
         if not isinstance(data, str) and not data.empty:
             data = data[pd.notnull(data['title'])]
             data = data[pd.notnull(data['rating'])]
-            #print(data)
             k = len(data)
             mes = smilarities.SimilarityMeasures()
             vid = 0
             while vid < k:
-                data1 = pd.DataFrame(self.db_game.read_text_index_videodata_from_db('hashtags', data['hashtags'][vid]))
-                subg = graph.begin()
-                node = Node("Video", id=str(data['id'][vid]), rating=data['rating'][vid], title=data['title'][vid])
-                subg.merge(node)
-                vid1 = 0
-                while vid1 <= len(data1):
-                    node1 = Node("Video", id=str(data1['id'][vid1]), rating=data1['rating'][vid1], title=data1['title'][vid1])
-                    subg.merge(node1)
-                    num = mes.jaccard_similarity(data['hashtags'][vid], data1['hashtags'][vid1])
-                    #print(len(data['hashtags'][vid]))
-                    if (num > 0.5 and len(data['hashtags'][vid])>3):
-                        jaccard = Relationship(node, "Jaccard", node1, jaccard_similarity = num)
-                        #print(jaccard)
-                        subg.merge(jaccard)
-                    num = mes.jaccard_similarity(data1['hashtags'][vid1], data['hashtags'][vid])
-                    #if (num > 0.5 and len(data['hashtags'][vid1])>3):
-                        #jaccard1 = Relationship(node1, "Jaccardback", node, jaccard_similarity = num)
-                        #subg.merge(jaccard1)
-                    vid1 += 1
-                #graph.merge(subg)
-                subg.commit()
+                if not pd.notnull(data['hashtags'][vid]) and (len(data['hashtags'][vid])) > 3:
+                    hashes = self.hashtag_list_to_str(data['hashtags'][vid])
+                    print(hashes, vid)
+                    data1 = pd.DataFrame(self.db_game.read_text_index_videodata_from_db('hashtags', hashes))
+                    data1 = data1[pd.notnull(data1['title'])]
+                    data1 = data1[pd.notnull(data1['rating'])]
+                    data1 = data1.reset_index()
+                    start = Node("Video", id=str(data['id'][vid]))
+                    graph.merge(start)
+                    start.properties['rating'] = data['rating'][vid]
+                    start.properties['title'] = data['title'][vid]
+                    start.push()
+                    vid1 = 0
+                    while vid1 < len(data1):
+                        stop = Node("Video", id=str(data1['id'][vid1]))
+                        graph.merge(stop)
+                        stop.properties['rating'] = data1['rating'][vid1]
+                        stop.properties['title'] = data1['title'][vid1]
+                        stop.push()
+                        num = mes.jaccard_similarity(data['hashtags'][vid], data1['hashtags'][vid1])
+                        #print(len(data['hashtags'][vid]))
+                        if (num > 0.5 and len(data1['hashtags'][vid1]) > 3) and data1['id'][vid1] != data['id'][vid]:
+                            print(num, vid, vid1)
+                            following = Relationship(start, "Jaccard", stop)
+                            graph.merge(following)
+                            following.properties['jaccard_similarity'] = num
+                            following.push()
+                        vid1 += 1
                 vid += 1
-            #print(pd.DataFrame(graph.run("MATCH (a:Video) RETURN a.id, a.title, a.rating LIMIT 10").data()))
+            print(pd.DataFrame(graph.run("MATCH (a:Video) RETURN a.id, a.title, a.rating LIMIT 10").data()))
         return
 
 
