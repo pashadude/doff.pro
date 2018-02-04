@@ -120,8 +120,13 @@ class converter:
           lstmFile.create_dataset('gt_1_'+str(video_id), (number_of_frames,1))
 
           #lstmFile.create_dataset('gt_2_'+str(video_id),(number_of_frames,1))  # unused
-          #lstmFile.create_dataset('ord'+str(video_id),(number_of_frames,1))   # unused
 
+      lstmFile.create_dataset('ord', (self.nVideos,1))
+
+   def createOrd(self, lstmFile):
+      ord_set = lstmFile.get('ord')
+      for video_id in range(0, self.nVideos):
+         ord_set[video_id] = video_id
 
    def writeInputForLSTM4VS(self,output_name):
       lstmFile = h5py.File(output_name,"w")
@@ -146,6 +151,8 @@ class converter:
            rating_set = lstmFile.get('gt_1_'+str(video_id))
            rating_set[linear_frame_id] = frame_rating
            print('assigning rating ',frame_rating,' to frame ', linear_frame_id)
+
+      createOrd(lstmFile)
 
       lstmFile.close()
       self.input_file.close()
