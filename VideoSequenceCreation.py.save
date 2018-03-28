@@ -22,22 +22,25 @@ class VideoSequencesCreation:
 
     def make_sequence(self):
         authenticate(settings.NeoHost, settings.NeoLog, settings.NeoPass)
-        graph = Graph("{0}/db/data/".format(settings.NeoHost))
-        query = """MATCH (start:Video)-[:Jaccard*5..10]->(sequence:Video) 
-        WHERE start<>sequence MATCH p=shortestPath((start:Video)-[:Jaccard*]->(sequence:Video)) 
-        WHERE NONE (n IN nodes(p) WHERE size(filter(x IN nodes(p) WHERE n = x))> 1)  
-        RETURN EXTRACT(n IN NODES(p)|[n.id, n.rating]) LIMIT 100000"""
-   
-        r1 = graph.run(query).data()
-        k = 0
-        for i in r1:
-            #print(i.values)
-            for video in i['EXTRACT(n IN NODES(p)|[n.id, n.rating])']:
-                 #print(video)
-                 self.seq_ids.append(k)
-                 self.video_ids.append(video[0])
-                 self.ratings.append(video[1])
-            k+=1
+        graph = Graph("{0}/db/data/".format(settings.NeoHost))        query = """MATCH (start:Video)-[jac:Jaccard]->(sequence:Video)
+        WITH start, sequence
+        MATCH pu = (sequence:Video)-[caj:Jaccard*]->(start:Video)
+        WITH start, nodes(pu) AS nds LIMIT 500000
+        WHERE ALL (n IN nds 
+            WHERE 1=LENGTH(FILTER(m IN nds 
+                WHERE m = n)))
+        RETURN nds"""
+        # sequence starts and ends in one node and consists of unique nodes we dont give the start in the result
+        res = graph.run(query).data()
+        #print(pd.DataFrame(res))
+        id = 0
+        for i in res:
+            for vids in i.values():
+                for element in vids:
+                    self.seq_ids.append(id)
+                    self.video_ids.append(element['id'])
+                    self.ratings.append(element['rating'])
+            id = id + 1
         data = {'sequence': self.seq_ids, 'video': self.video_ids, 'rating': self.ratings}
         df = pd.DataFrame(data)
         df = df[pd.notnull(df['video'])]

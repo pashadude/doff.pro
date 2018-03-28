@@ -48,6 +48,16 @@ class converter:
 
        return video_id
 
+   def createOrd(self, lstmFile):
+      ord_set = lstmFile.get('ord')
+      for video_id in range(0, self.nVideos):
+         ord_set[video_id] = video_id
+
+      for sequence_id, video_id in self.seqId_To_videoId.items():
+         #ord_set[video_id] = sequence_id
+         print("mapping video id ",video_id," to sequence id ",sequence_id)
+         
+
    def updateNumberOfFrames(self,video_id, vid_id, frame_id):
        if (video_id not in self.nFramesPerVideo):
           self.nFramesPerSeqVideo[video_id]=frame_id
@@ -123,11 +133,6 @@ class converter:
 
       lstmFile.create_dataset('ord', (self.nVideos,1))
 
-   def createOrd(self, lstmFile):
-      ord_set = lstmFile.get('ord')
-      for video_id in range(0, self.nVideos):
-         ord_set[video_id] = video_id
-
    def writeInputForLSTM4VS(self,output_name):
       lstmFile = h5py.File(output_name,"w")
       self.initializeOutput(lstmFile)
@@ -152,7 +157,7 @@ class converter:
            rating_set[linear_frame_id] = frame_rating
            print('assigning rating ',frame_rating,' to frame ', linear_frame_id)
 
-      createOrd(lstmFile)
+      self.createOrd(lstmFile)
 
       lstmFile.close()
       self.input_file.close()

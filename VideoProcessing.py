@@ -26,7 +26,7 @@ class SequenceFetcher:
 
     def make_sequences(self):
         df = pd.read_csv(self.videoSequenceFilePath)
-        #print(list(df.columns.values))
+        print(list(df.columns.values))
         k = 1
         for i in df['sequence']:
             if str(i) in self.sequences:
